@@ -8,6 +8,12 @@
   "vars": {
     "SEARCH_API": "https://api.duckduckgo.com"
   },
+  "routes": [
+    {
+      "pattern": "search-server.zztxorg.dpdns.org",
+      "custom_domain": true
+    }
+  ],
   "workers_dev": false,
   "preview_urls": false
 }
