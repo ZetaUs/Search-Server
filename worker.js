@@ -12,38 +12,60 @@ export default {
 
     const url = new URL(request.url);
     const q = url.searchParams.get("q");
-    if (!q) return new Response(JSON.stringify({ error: "缺少关键词q" }), { status:400, headers:{...corsHeaders,"Content-Type":"application/json"} });
-
-    try {
-      // 免费公开SearXNG实例，返回标准网页搜索结果
-      const searchUrl = new URL("https://search.nixnet.services/search");
-      searchUrl.searchParams.set("q", q);
-      searchUrl.searchParams.set("format", "json");
-      searchUrl.searchParams.set("lang", "zh");
-
-      const res = await fetch(searchUrl.toString(), {
-        headers: {
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/125.0.0.0 Safari/537.36",
-          "Accept-Language": "zh-CN,zh;q=0.9"
-        }
-      });
-
-      if (!res.ok) throw new Error(`上游接口异常 ${res.status}`);
-      const raw = await res.json();
-      // 统一格式化结果给前端
-      const results = (raw.results || []).map(item => ({
-        url: item.url,
-        title: item.title,
-        desc: item.content || "暂无描述"
-      }));
-
-      return new Response(JSON.stringify({ results }), {
+    if (!q) {
+      return new Response(JSON.stringify({ error: "缺少搜索关键词 q" }), {
+        status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
-    } catch (err) {
-      return new Response(JSON.stringify({ error: true, msg: err.message }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" }
-      });
     }
+
+    // 实例优先级：主站 -> 3个备用站
+    const instanceList = [
+      "https://search.kael.ink/search",
+      "https://searx.party/search",
+      "https://search.sapti.me/search",
+      "https://searx.tiekoetter.com/search"
+    ];
+
+    const searchParams = new URLSearchParams();
+    searchParams.set("q", q);
+    searchParams.set("format", "json");
+    searchParams.set("lang", "zh");
+
+    let lastErrMsg = "";
+    // 逐个尝试实例，成功即返回
+    for (const base of instanceList) {
+      try {
+        const targetUrl = `${base}?${searchParams.toString()}`;
+        const res = await fetch(targetUrl, {
+          signal: AbortSignal.timeout(6000), // 单实例6秒超时
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/126.0.0.0 Safari/537.36",
+            "Accept-Language": "zh-CN,zh;q=0.9"
+          }
+        });
+
+        if (!res.ok) throw new Error(`实例${base}返回${res.status}`);
+        const raw = await res.json();
+        const results = (raw.results || []).map(item => ({
+          url: item.url,
+          title: item.title,
+          desc: item.content || "暂无页面描述"
+        }));
+
+        return new Response(JSON.stringify({ results }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
+      } catch (err) {
+        lastErrMsg = err.message;
+        continue; // 当前实例失败，循环下一个备用
+      }
+    }
+
+    // 全部实例都失效才返回报错
+    return new Response(JSON.stringify({ error: true, msg: "所有搜索实例均不可用：" + lastErrMsg }), {
+      status: 503,
+      headers: { ...corsHeaders, "Content-Type": "application/json" }
+    });
   }
 };
