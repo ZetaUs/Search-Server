@@ -1,6 +1,6 @@
 // wrangler.jsonc 搜索跨域中转Worker配置
 {
-  "name": "search-proxy", // Worker名称，部署后域名：search-proxy.xxx.workers.dev
+  "name": "search-server", // Worker名称，部署后域名：search-proxy.xxx.workers.dev
   "main": "./worker.js", // 入口JS文件
   "compatibility_date": "2026-08-19", // Cloudflare运行时兼容日期
   "compatibility_flags": [
