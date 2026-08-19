@@ -12,40 +12,37 @@ export default {
 
     const url = new URL(request.url);
     const q = url.searchParams.get("q");
-    if (!q) return new Response("缺少搜索关键词 q", { status:400, headers:corsHeaders });
+    if (!q) return new Response(JSON.stringify({ error: "缺少关键词q" }), { status:400, headers:{...corsHeaders,"Content-Type":"application/json"} });
 
     try {
-      // 使用网页搜索接口，而非问答API
-      const searchUrl = new URL("https://html.duckduckgo.com/html/");
+      // 免费公开SearXNG实例，返回标准网页搜索结果
+      const searchUrl = new URL("https://search.nixnet.services/search");
       searchUrl.searchParams.set("q", q);
-      searchUrl.searchParams.set("kl", "zh-cn");
-      searchUrl.searchParams.set("b", "");
+      searchUrl.searchParams.set("format", "json");
+      searchUrl.searchParams.set("lang", "zh");
 
       const res = await fetch(searchUrl.toString(), {
         headers: {
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36"
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/125.0.0.0 Safari/537.36",
+          "Accept-Language": "zh-CN,zh;q=0.9"
         }
       });
-      const htmlText = await res.text();
 
-      // 正则提取标题、链接、描述
-      const resultReg = /<a class="result__a" href="([^"]+)">([^<]+)<\/a>[\s\S]*?<div class="result__snippet">([\s\S]*?)<\/div>/g;
-      const results = [];
-      let match;
-      while ((match = resultReg.exec(htmlText)) !== null) {
-        results.push({
-          url: decodeURIComponent(match[1]),
-          title: match[2].trim(),
-          desc: match[3].replace(/<.*?>/g, "").trim()
-        });
-      }
+      if (!res.ok) throw new Error(`上游接口异常 ${res.status}`);
+      const raw = await res.json();
+      // 统一格式化结果给前端
+      const results = (raw.results || []).map(item => ({
+        url: item.url,
+        title: item.title,
+        desc: item.content || "暂无描述"
+      }));
 
       return new Response(JSON.stringify({ results }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
-    } catch (e) {
-      return new Response(JSON.stringify({ error: "搜索失败", msg:e.message }), {
-        status:500, headers:{...corsHeaders, "Content-Type":"application/json"}
+    } catch (err) {
+      return new Response(JSON.stringify({ error: true, msg: err.message }), {
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }
   }
