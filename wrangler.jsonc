@@ -1,13 +1,13 @@
-// wrangler.jsonc 搜索跨域中转Worker配置
 {
-  "name": "search-server", // Worker名称，部署后域名：search-proxy.xxx.workers.dev
-  "main": "./worker.js", // 入口JS文件
-  "compatibility_date": "2026-08-19", // Cloudflare运行时兼容日期
+  "name": "search-server",
+  "main": "./worker.js",
+  "compatibility_date": "2026-08-19",
   "compatibility_flags": [
-    "nodejs_compat" // 开启NodeJS兼容API
+    "nodejs_compat"
   ],
-  /* 环境变量，可在这里写固定值，也可在控制台配置密钥 */
   "vars": {
     "SEARCH_API": "https://api.duckduckgo.com"
-  }
+  },
+  "workers_dev": false,
+  "preview_urls": false
 }
