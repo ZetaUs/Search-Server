@@ -8,7 +8,7 @@
 
   "routes": [
     {
-      "pattern": "search-server.zztxorg.dpdns.org,
+      "pattern": "search-server.zztxorg.dpdns.org",
       "custom_domain": true
     }
   ]
